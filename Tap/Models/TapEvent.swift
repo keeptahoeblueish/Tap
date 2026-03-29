@@ -1,48 +1,60 @@
-import Foundation
+import SwiftUI
 
-struct TapEvent: Identifiable {
-    let id: String
+struct TapEvent: Codable, Identifiable {
     let type: EventType
+    let id: String
+    let toolName: String?
+    let toolInput: String?
     let message: String
-    let timestamp: Date
-    var isPending: Bool
+    let timestamp: TimeInterval
+    var status: Status = .pending
 
     enum EventType: String, Codable {
         case permission
-        case execution
+        case blocker
+        case complete
         case error
 
         var label: String {
             switch self {
-            case .permission: "Permission"
-            case .execution: "Execution"
-            case .error: "Error"
+            case .permission: return "Permission"
+            case .blocker: return "Blocker"
+            case .complete: return "Complete"
+            case .error: return "Error"
             }
         }
 
-        var color: String {
+        var color: Color {
             switch self {
-            case .permission: "#FF9500" // orange
-            case .execution: "#34C759" // green
-            case .error: "#FF3B30" // red
+            case .permission: return .orange
+            case .blocker: return .blue
+            case .complete: return .green
+            case .error: return .red
             }
         }
     }
 
+    enum Status: String, Codable {
+        case pending
+        case approved
+        case denied
+        case dismissed
+    }
+
+    var isPending: Bool {
+        type == .permission && status == .pending
+    }
+
     var timeAgo: String {
-        let interval = Date.now.timeIntervalSince(timestamp)
-        switch interval {
-        case ..<60:
-            return "now"
-        case ..<3600:
-            let minutes = Int(interval) / 60
-            return "\(minutes)m ago"
-        case ..<86400:
-            let hours = Int(interval) / 3600
-            return "\(hours)h ago"
-        default:
-            let days = Int(interval) / 86400
-            return "\(days)d ago"
-        }
+        let elapsed = Date().timeIntervalSince1970 - timestamp
+        if elapsed < 60 { return "just now" }
+        if elapsed < 3600 { return "\(Int(elapsed / 60))m ago" }
+        return "\(Int(elapsed / 3600))h ago"
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case type, id, message, timestamp, status
+        case toolName = "tool_name"
+        case toolInput = "tool_input"
     }
 }

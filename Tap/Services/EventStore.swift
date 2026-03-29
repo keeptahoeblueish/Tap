@@ -7,7 +7,7 @@ final class EventStore {
     func add(_ event: TapEvent) {
         // Stub: will be implemented in Task 5
         var newEvent = event
-        newEvent.isPending = true
+        newEvent.status = .pending
         events.insert(newEvent, at: 0)
         onEventsChanged?(events)
     }
@@ -15,7 +15,7 @@ final class EventStore {
     func resolve(eventId: String) {
         // Stub: will be implemented in Task 5
         if let index = events.firstIndex(where: { $0.id == eventId }) {
-            events[index].isPending = false
+            events[index].status = .dismissed
             onEventsChanged?(events)
         }
     }

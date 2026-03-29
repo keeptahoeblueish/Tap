@@ -69,7 +69,7 @@ struct EventRow: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Circle()
-                    .fill(Color(hex: event.type.color))
+                    .fill(event.type.color)
                     .frame(width: 8, height: 8)
                 Text(event.type.label)
                     .font(.caption)
@@ -100,16 +100,5 @@ struct EventRow: View {
         .padding(8)
         .background(event.isPending ? Color.accentColor.opacity(0.05) : Color.clear)
         .cornerRadius(6)
-    }
-}
-
-extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
-        let rgb = UInt32(hex, radix: 16) ?? 0
-        let red = Double((rgb >> 16) & 0xFF) / 255.0
-        let green = Double((rgb >> 8) & 0xFF) / 255.0
-        let blue = Double(rgb & 0xFF) / 255.0
-        self.init(red: red, green: green, blue: blue)
     }
 }
