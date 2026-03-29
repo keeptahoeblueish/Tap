@@ -1,28 +1,28 @@
 import Foundation
 
 final class EventStore {
+    private var events: [TapEvent] = []
+    private let maxEvents = 50
     var onEventsChanged: (([TapEvent]) -> Void)?
-    private(set) var events: [TapEvent] = []
 
     func add(_ event: TapEvent) {
-        // Stub: will be implemented in Task 5
         var newEvent = event
         newEvent.status = .pending
         events.insert(newEvent, at: 0)
+        if events.count > maxEvents {
+            events = Array(events.prefix(maxEvents))
+        }
         onEventsChanged?(events)
     }
 
     func resolve(eventId: String) {
-        // Stub: will be implemented in Task 5
         if let index = events.firstIndex(where: { $0.id == eventId }) {
             events[index].status = .dismissed
             onEventsChanged?(events)
         }
     }
 
-    func clear() {
-        // Stub: will be implemented in Task 5
-        events.removeAll()
-        onEventsChanged?(events)
+    func all() -> [TapEvent] {
+        events
     }
 }
