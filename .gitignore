@@ -1,27 +1,35 @@
-# Xcode
-build/
+# Xcode build files
+.build/
+*.xcodeproj/
+*.xcworkspace/
 DerivedData/
-*.xcuserstate
-*.xcworkspace/xcuserdata/
-*.pbxuser
-*.mode1v3
-*.mode2v3
-*.perspectivev3
-xcuserdata/
+build/
+*.o
+*.a
+*.so
+
+# Swift Package Manager
+.swiftpm/
+Packages/
+Package.resolved
 
 # macOS
 .DS_Store
+.AppleDouble
+.LSOverride
 *.swp
 *~
 
-# Distribution
-*.dmg
-*.zip
-
-# Swift Package Manager
-.build/
-*.xcodeproj/
-
 # IDE
 .vscode/
-*.swiftpm/xcode
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
