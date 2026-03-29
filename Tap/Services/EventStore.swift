@@ -15,9 +15,9 @@ final class EventStore {
         onEventsChanged?(events)
     }
 
-    func resolve(eventId: String) {
+    func resolve(eventId: String, approved: Bool) {
         if let index = events.firstIndex(where: { $0.id == eventId }) {
-            events[index].status = .dismissed
+            events[index].status = approved ? .approved : .denied
             onEventsChanged?(events)
         }
     }

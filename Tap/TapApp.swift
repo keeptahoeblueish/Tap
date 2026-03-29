@@ -63,7 +63,7 @@ final class AppState: ObservableObject {
     }
 
     func handleResponse(eventId: String, approved: Bool) {
-        eventStore.resolve(eventId: eventId)
+        eventStore.resolve(eventId: eventId, approved: approved)
         socketServer.sendResponse(eventId: eventId, approved: approved)
     }
 }
