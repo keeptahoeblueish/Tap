@@ -57,4 +57,25 @@ struct TapEvent: Codable, Identifiable {
         case toolName = "tool_name"
         case toolInput = "tool_input"
     }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        type = try container.decode(EventType.self, forKey: .type)
+        id = try container.decode(String.self, forKey: .id)
+        toolName = try container.decodeIfPresent(String.self, forKey: .toolName)
+        toolInput = try container.decodeIfPresent(String.self, forKey: .toolInput)
+        message = try container.decode(String.self, forKey: .message)
+        timestamp = try container.decode(TimeInterval.self, forKey: .timestamp)
+        status = try container.decodeIfPresent(Status.self, forKey: .status) ?? .pending
+    }
+
+    init(type: EventType, id: String, toolName: String? = nil, toolInput: String? = nil, message: String, timestamp: TimeInterval, status: Status = .pending) {
+        self.type = type
+        self.id = id
+        self.toolName = toolName
+        self.toolInput = toolInput
+        self.message = message
+        self.timestamp = timestamp
+        self.status = status
+    }
 }
