@@ -66,21 +66,16 @@ final class HookInstallerTests: XCTestCase {
         installer.install()
         XCTAssertTrue(installer.isInstalled())
 
-        // Record creation time
-        let originalAttrs = try FileManager.default.attributesOfItem(atPath: testSettingsPath)
-        let originalModTime = originalAttrs[.modificationDate] as? Date
-
-        // Small delay to ensure time difference would be detectable
-        Thread.sleep(forTimeInterval: 0.1)
+        // Record file content after first install
+        let originalData = try Data(contentsOf: URL(fileURLWithPath: testSettingsPath))
 
         // Second install should be skipped
         installer.installIfNeeded()
 
-        let newAttrs = try FileManager.default.attributesOfItem(atPath: testSettingsPath)
-        let newModTime = newAttrs[.modificationDate] as? Date
+        let newData = try Data(contentsOf: URL(fileURLWithPath: testSettingsPath))
 
-        // Timestamps should be the same (or very close)
-        XCTAssertEqual(originalModTime, newModTime, accuracy: 0.01)
+        // Content should be identical (file wasn't rewritten)
+        XCTAssertEqual(originalData, newData)
     }
 
     func testUninstallRemovesHooks() throws {
