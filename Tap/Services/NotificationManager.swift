@@ -1,12 +1,22 @@
 import Foundation
 import UserNotifications
+import AppKit
 
 final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     var onResponse: ((String, Bool) -> Void)?
+    private static var shared: NotificationManager?
 
     override init() {
         super.init()
-        UNUserNotificationCenter.current().delegate = self
+        // Lazy-load delegate only when the app bundle is available
+        setupDelegate()
+    }
+
+    private func setupDelegate() {
+        // Only set delegate if running in a proper app context (not in unit tests)
+        if NSApplication.shared.delegate != nil {
+            UNUserNotificationCenter.current().delegate = self
+        }
     }
 
     func requestPermission() {
@@ -18,12 +28,12 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     }
 
     func registerCategories() {
-        let categories = buildCategories()
+        let categories = Self.buildCategories()
         UNUserNotificationCenter.current().setNotificationCategories(categories)
     }
 
     func send(_ event: TapEvent) {
-        let content = buildContent(for: event)
+        let content = Self.buildContent(for: event)
         let request = UNNotificationRequest(identifier: event.id, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
@@ -32,7 +42,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         }
     }
 
-    func buildContent(for event: TapEvent) -> UNMutableNotificationContent {
+    static func buildContent(for event: TapEvent) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
         content.sound = .default
         content.userInfo["event_id"] = event.id
@@ -60,7 +70,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         return content
     }
 
-    func buildCategories() -> Set<UNNotificationCategory> {
+    static func buildCategories() -> Set<UNNotificationCategory> {
         let approveAction = UNNotificationAction(identifier: "APPROVE", title: "Approve", options: .foreground)
         let denyAction = UNNotificationAction(identifier: "DENY", title: "Deny", options: .destructive)
         let permissionCategory = UNNotificationCategory(

@@ -4,8 +4,7 @@ import UserNotifications
 
 final class NotificationManagerTests: XCTestCase {
     func testNotificationCategorySetup() {
-        let manager = NotificationManager()
-        let categories = manager.buildCategories()
+        let categories = NotificationManager.buildCategories()
 
         let permissionCategory = categories.first { $0.identifier == "PERMISSION" }
         XCTAssertNotNil(permissionCategory)
@@ -20,9 +19,8 @@ final class NotificationManagerTests: XCTestCase {
     }
 
     func testNotificationContentForPermission() {
-        let manager = NotificationManager()
         let event = TapEvent(type: .permission, id: "evt_001", toolName: "Bash", toolInput: "git push origin main", message: "Claude wants to run: git push origin main", timestamp: Date().timeIntervalSince1970)
-        let content = manager.buildContent(for: event)
+        let content = NotificationManager.buildContent(for: event)
         XCTAssertEqual(content.title, "Permission Needed")
         XCTAssertEqual(content.body, "Claude wants to run: git push origin main")
         XCTAssertEqual(content.categoryIdentifier, "PERMISSION")
@@ -30,25 +28,22 @@ final class NotificationManagerTests: XCTestCase {
     }
 
     func testNotificationContentForError() {
-        let manager = NotificationManager()
         let event = TapEvent(type: .error, id: "evt_002", toolName: nil, toolInput: nil, message: "Build failed: TypeScript error", timestamp: Date().timeIntervalSince1970)
-        let content = manager.buildContent(for: event)
+        let content = NotificationManager.buildContent(for: event)
         XCTAssertEqual(content.title, "Error")
         XCTAssertEqual(content.categoryIdentifier, "INFO")
     }
 
     func testNotificationContentForComplete() {
-        let manager = NotificationManager()
         let event = TapEvent(type: .complete, id: "evt_003", toolName: nil, toolInput: nil, message: "Deployed to preview", timestamp: Date().timeIntervalSince1970)
-        let content = manager.buildContent(for: event)
+        let content = NotificationManager.buildContent(for: event)
         XCTAssertEqual(content.title, "Task Complete")
         XCTAssertEqual(content.categoryIdentifier, "INFO")
     }
 
     func testNotificationContentForBlocker() {
-        let manager = NotificationManager()
         let event = TapEvent(type: .blocker, id: "evt_004", toolName: nil, toolInput: nil, message: "Action needed now", timestamp: Date().timeIntervalSince1970)
-        let content = manager.buildContent(for: event)
+        let content = NotificationManager.buildContent(for: event)
         XCTAssertEqual(content.title, "Action Needed")
         XCTAssertEqual(content.categoryIdentifier, "INFO")
     }

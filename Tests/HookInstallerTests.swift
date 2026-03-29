@@ -102,7 +102,14 @@ final class HookInstallerTests: XCTestCase {
 
     func testGenerateHookScriptContainsSocketPath() {
         let installer = HookInstaller(settingsPath: testSettingsPath, hookScriptPath: testHookScriptPath)
-        let script = installer.hookScriptPath
+        // Access the private method via reflection or test the behavior
+        let testPath = testHookScriptPath
+        let dir = (testPath as NSString).deletingLastPathComponent
+        try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+
+        installer.install()
+
+        let script = try! String(contentsOfFile: testHookScriptPath, encoding: .utf8)
         XCTAssertFalse(script.isEmpty)
         XCTAssertTrue(script.contains("tap.sock"))
     }
