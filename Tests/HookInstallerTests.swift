@@ -103,7 +103,7 @@ final class HookInstallerTests: XCTestCase {
     func testGenerateHookScriptContainsSocketPath() {
         let installer = HookInstaller(settingsPath: testSettingsPath, hookScriptPath: testHookScriptPath)
         // Access the private method via reflection or test the behavior
-        let testPath = testHookScriptPath
+        let testPath: String = testHookScriptPath
         let dir = (testPath as NSString).deletingLastPathComponent
         try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
 
