@@ -1,43 +1,44 @@
 import Foundation
 import UserNotifications
-import AppKit
 
 final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     var onResponse: ((String, Bool) -> Void)?
-    private static var shared: NotificationManager?
+    private var centerAvailable = false
 
     override init() {
         super.init()
-        // Lazy-load delegate only when the app bundle is available
-        setupDelegate()
     }
 
-    private func setupDelegate() {
-        // Only set delegate if running in a proper app context (not in unit tests)
-        if NSApplication.shared.delegate != nil {
-            UNUserNotificationCenter.current().delegate = self
+    private func getCenter() -> UNUserNotificationCenter? {
+        // UNUserNotificationCenter crashes if not running in an app bundle
+        guard Bundle.main.bundleIdentifier != nil else { return nil }
+        let center = UNUserNotificationCenter.current()
+        if !centerAvailable {
+            center.delegate = self
+            centerAvailable = true
         }
+        return center
     }
 
     func requestPermission() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+        getCenter()?.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
             if let error = error {
-                print("Notification permission error: \(error.localizedDescription)")
+                print("Tap: notification permission error: \(error.localizedDescription)")
             }
         }
     }
 
     func registerCategories() {
         let categories = Self.buildCategories()
-        UNUserNotificationCenter.current().setNotificationCategories(categories)
+        getCenter()?.setNotificationCategories(categories)
     }
 
     func send(_ event: TapEvent) {
         let content = Self.buildContent(for: event)
         let request = UNNotificationRequest(identifier: event.id, content: content, trigger: nil)
-        UNUserNotificationCenter.current().add(request) { error in
+        getCenter()?.add(request) { error in
             if let error = error {
-                print("Failed to send notification: \(error.localizedDescription)")
+                print("Tap: notification error: \(error.localizedDescription)")
             }
         }
     }

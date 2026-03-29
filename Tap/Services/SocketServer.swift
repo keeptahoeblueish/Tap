@@ -11,6 +11,7 @@ final class SocketServer: ObservableObject {
     private let responseQueue = DispatchQueue(label: "com.tap.socket.response", qos: .userInitiated)
     private var pendingConnections: [String: PendingConnection] = [:]
     private let pendingLock = NSLock()
+    private var isAccepting = false
 
     private struct PendingConnection {
         let clientSocket: Int32
@@ -29,15 +30,20 @@ final class SocketServer: ObservableObject {
     }
 
     func start() {
-        guard !isRunning else { return }
+        guard !isRunning else {
+            NSLog("SocketServer: Already running, skipping start")
+            return
+        }
 
+        NSLog("SocketServer: start() called, dispatching setup")
         acceptQueue.async { [weak self] in
+            NSLog("SocketServer: acceptQueue block executing")
             self?.setupAndRun()
         }
     }
 
     func stop() {
-        guard isRunning else { return }
+        isAccepting = false
 
         DispatchQueue.main.async {
             self.isRunning = false
@@ -62,13 +68,15 @@ final class SocketServer: ObservableObject {
         let tapDir = appSupport.appendingPathComponent("Tap")
         try? FileManager.default.createDirectory(at: tapDir, withIntermediateDirectories: true)
 
+        NSLog("SocketServer: Setting up at \(socketPath)")
+
         // Remove stale socket file
         try? FileManager.default.removeItem(atPath: socketPath)
 
         // Create Unix domain socket
         serverSocket = socket(AF_UNIX, SOCK_STREAM, 0)
         guard serverSocket >= 0 else {
-            print("SocketServer: Failed to create socket")
+            NSLog("SocketServer: Failed to create socket: errno=\(errno)")
             return
         }
 
@@ -90,24 +98,28 @@ final class SocketServer: ObservableObject {
         }
 
         guard result == 0 else {
-            print("SocketServer: Failed to bind socket: \(errno)")
+            NSLog("SocketServer: Failed to bind socket: errno=\(errno) path=\(socketPath)")
             close(serverSocket)
             return
         }
 
         // Listen for connections
         guard listen(serverSocket, 5) == 0 else {
-            print("SocketServer: Failed to listen")
+            NSLog("SocketServer: Failed to listen: errno=\(errno)")
             close(serverSocket)
             return
         }
 
+        NSLog("SocketServer: Listening on \(socketPath)")
+
+        // Set isRunning on main thread for UI, but also track locally for accept loop
+        isAccepting = true
         DispatchQueue.main.async {
             self.isRunning = true
         }
 
         // Accept loop
-        while isRunning {
+        while isAccepting {
             var clientAddr = sockaddr_un()
             var clientAddrLen = socklen_t(MemoryLayout<sockaddr_un>.size)
 
@@ -187,7 +199,7 @@ final class SocketServer: ObservableObject {
                 close(clientSocket)
             }
         } catch {
-            print("SocketServer: Failed to parse event: \(error)")
+            NSLog("SocketServer: Failed to parse event: \(error)")
             close(clientSocket)
         }
     }
