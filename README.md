@@ -1,218 +1,135 @@
-# Tap - Claude Command Notification System
+# Tap
 
-Tap is a macOS notification system that allows Claude AI to request permissions for commands before execution. It provides a secure bridge between Claude's operations and your system through a menu bar app that displays pending actions and allows you to approve or deny requests.
+[![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue)](https://www.apple.com/macos/)
+[![Swift 5.9](https://img.shields.io/badge/Swift-5.9-orange)](https://swift.org)
+[![MIT License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![Phase: Mac App](https://img.shields.io/badge/Phase-Mac%20App-blue)](#roadmap)
 
-## Features
+Native macOS menu bar app that sends notifications when Claude Code needs your attention. Get out of the terminal and back to work.
 
-- **Permission Requests**: Claude can request permission before running sensitive commands like git push, file deletion, or deployment operations
-- **Real-time Notifications**: Receive macOS notifications for important events (blockers, errors, task completions)
-- **Menu Bar Integration**: Lightweight menu bar app shows all pending events at a glance
-- **Bash Hook System**: Automatic bash command interception via DEBUG trap hooks
-- **Unix Domain Socket IPC**: Efficient inter-process communication between Claude CLI and the Tap app
-- **Approval/Denial**: Quick approve/deny buttons for permission requests
-- **Event History**: View recent events and their status in the menu bar
+## The Problem
 
-## Architecture
+Claude Code users face a choice:
+1. Babysit the terminal pressing Y/N all day
+2. Turn on bypass mode and hope for the best
 
-Tap consists of five main components:
+Tap creates a third option: **walk away and get notified when Claude actually needs you**.
 
-### 1. Socket Server (`SocketServer.swift`)
-- Listens on Unix domain socket at `~/Library/Application Support/Tap/tap.sock`
-- Receives command events as newline-delimited JSON
-- Handles blocking for permission requests (up to 5-minute timeout)
-- Routes events to the app state and sends responses back to Claude
+## What It Does
 
-### 2. Notification Manager (`NotificationManager.swift`)
-- Creates and sends macOS notifications to the user
-- Defines notification categories: PERMISSION (approve/deny), INFO (informational)
-- Handles notification responses and routes them to the app state
-- Integrates with UserNotifications framework
+1. **One-click setup** — Install Tap, launch it. That's it. No config files, no terminal commands.
+2. **Auto-configures Claude Code** — On first launch, Tap adds three hooks to `~/.claude/settings.json`
+3. **Native notifications** — When Claude Code needs permission, hits an error, finishes a task, or needs manual action, you get a macOS notification
+4. **Approve/Deny buttons** — Permission requests come with action buttons. Your decision flows back to Claude Code instantly
+5. **View history** — Click the menu bar icon to see recent events at a glance
 
-### 3. Event Store (`EventStore.swift`)
-- In-memory store for recent events (max 50)
-- Tracks event status: pending, approved, denied, dismissed
-- Notifies observers when events change via closure callbacks
+## How It Works
 
-### 4. Hook Installer (`HookInstaller.swift`)
-- Installs bash DEBUG trap hook on first launch
-- Integrates with `.zshrc` shell configuration for persistence
-- Filters common navigation commands (echo, pwd, ls, cd, etc.)
-- Sends intercepted commands as JSON events to the socket
-- Provides idempotent install/uninstall operations
+```
+Claude Code
+    ↓
+Hits hook (permission request)
+    ↓
+tap-hook.sh fires
+    ↓
+Sends JSON → Unix socket → Tap.app
+    ↓
+Native macOS notification with Approve/Deny
+    ↓
+User clicks Approve
+    ↓
+Response → socket → Claude Code continues
+```
 
-### 5. UI Layer (`TapApp.swift`, `MenuBarView.swift`)
-- SwiftUI-based menu bar application
-- Displays socket connection status
-- Shows list of recent events with color coding
-- Provides approve/deny buttons for permission requests
-- Shows "Reinstall Hooks" and "Quit Tap" buttons
+Three hooks are auto-installed to `~/.claude/settings.json`:
+- **PreToolUse** — fires before Claude runs a tool, blocks until you approve/deny
+- **Stop** — fires when a task completes, shows a completion notification
+- **Notification** — fires for errors, blockers, or other alerts
 
-## Event Types
+No `.zshrc` modifications. No bash traps. Just sockets and notifications.
 
-Events sent through Tap can be one of four types:
+## Notification Types
 
-| Type | Color | Purpose |
-|------|-------|---------|
-| `permission` | Orange | Requests user approval for a sensitive operation |
-| `blocker` | Blue | Indicates a blocking issue that needs immediate attention |
-| `complete` | Green | Notifies that a task has completed successfully |
-| `error` | Red | Reports an error or failure |
+| Type | Example | Actions |
+|------|---------|---------|
+| **Permission** | "Claude wants to run: git push origin main" | Approve / Deny |
+| **Blocker** | "Claude needs you to log in to Railway" | Dismiss |
+| **Complete** | "Deployed to preview — took 12 minutes" | Dismiss |
+| **Error** | "Build failed: TypeScript error" | Dismiss |
 
-## Installation
+## Requirements
 
-### Prerequisites
-- macOS 14.0 or later
-- Swift 5.9 or later
-- Homebrew (for the bash hook installation path)
+- **macOS 14 (Sonoma)** or later
+- **Claude Code CLI** installed
+- **socat** — `brew install socat` (used by the hook script for socket communication)
 
-### Building from Source
+## Install
 
+### From Releases
+1. Download `Tap.app` from [Releases](../../releases)
+2. Drag to **Applications**
+3. Launch — Tap auto-configures Claude Code on first run
+
+### From Homebrew
 ```bash
-swift build
+brew install --cask tap
 ```
 
-### Running
+## What Gets Modified
 
-```bash
-# Run the app in the background
-.build/debug/Tap &
+On first launch, Tap adds three hooks to `~/.claude/settings.json`. Your existing settings are preserved. If hooks get removed, click "Reinstall Hooks" in the menu bar. Uninstall from the app menu to cleanly remove all hooks.
 
-# Or install as a menu bar app by running the binary directly
-open .build/debug/Tap
-```
+## Tech Stack
 
-## Hook Installation
+- **Swift** / **SwiftUI** / **MenuBarExtra** (macOS 14+)
+- **UserNotifications** framework for native alerts
+- **Unix domain sockets** for IPC between Claude Code and Tap
+- **socat** in the hook script to communicate with sockets
 
-When Tap launches, it automatically:
-
-1. Creates a bash hook script at `/opt/homebrew/lib/claude-bash-hook.sh`
-2. Adds a source line to `~/.zshrc` to load the hook on shell startup
-3. Enables the bash DEBUG trap to intercept commands
-
-The hook is idempotent—it's safe to run the installation multiple times.
-
-To manually reinstall hooks, click the "Reinstall Hooks" button in the Tap menu bar.
-
-## Event JSON Format
-
-Commands sent from the bash hook to Tap follow this format:
-
-```json
-{
-  "type": "command",
-  "id": "bash_1234567890123456789",
-  "tool_name": "Bash",
-  "tool_input": "git push origin main",
-  "message": "Claude wants to run: git push origin main",
-  "timestamp": 1234567890
-}
-```
-
-Permission request responses from Tap are:
-
-```json
-{
-  "decision": "allow" | "deny"
-}
-```
-
-## Socket Communication
-
-Tap uses Unix domain sockets for inter-process communication:
-
-- **Socket Path**: `~/Library/Application Support/Tap/tap.sock`
-- **Protocol**: Newline-delimited JSON
-- **Behavior**:
-  - Permission events block until a response is sent (5-minute timeout)
-  - Other events are processed asynchronously
-  - The client receives the decision as a JSON response
-
-## Testing
-
-Run the test suite:
-
-```bash
-swift test
-```
-
-Tests cover:
-- Notification category setup and content generation
-- Socket server connection handling and event parsing
-- Event store management and state transitions
-- Hook installer idempotency and shell config integration
-- Model encoding/decoding and computed properties
-
-## Development
-
-### Project Structure
+## Project Structure
 
 ```
 Tap/
 ├── Tap/
+│   ├── TapApp.swift              — App entry point, MenuBarExtra
+│   ├── MenuBarView.swift         — Menu bar dropdown UI
 │   ├── Models/
-│   │   ├── TapEvent.swift      # Event model and status tracking
-│   │   └── TapResponse.swift    # Response model
-│   ├── Services/
-│   │   ├── SocketServer.swift   # Unix socket server
-│   │   ├── NotificationManager.swift  # macOS notifications
-│   │   ├── EventStore.swift     # In-memory event storage
-│   │   └── HookInstaller.swift  # Bash hook management
-│   ├── MenuBarView.swift        # Menu bar UI
-│   └── TapApp.swift             # App entry point and state
-├── Tests/
-│   ├── NotificationManagerTests.swift
-│   ├── SocketServerTests.swift
-│   ├── TapEventTests.swift
-│   └── HookInstallerTests.swift
-└── Package.swift                # Swift Package manifest
+│   │   ├── TapEvent.swift        — Event types and JSON parsing
+│   │   └── TapResponse.swift     — Approve/deny response
+│   └── Services/
+│       ├── SocketServer.swift    — Unix domain socket listener
+│       ├── NotificationManager.swift — macOS notifications
+│       ├── HookInstaller.swift   — Auto-configures Claude Code
+│       └── EventStore.swift      — Recent event history
+├── Scripts/
+│   └── tap-hook.sh               — Hook script (auto-installed)
+├── Tests/                        — Test suite
+└── Distribution/
+    └── tap.rb                    — Homebrew cask formula
 ```
 
-### Building with SPM
+## Event Flow
 
-```bash
-# Debug build
-swift build
+When Claude Code triggers a hook:
+1. `tap-hook.sh` serializes the request as JSON
+2. Sends it through a Unix domain socket to Tap
+3. Tap.app displays a native macOS notification
+4. User clicks Approve or Deny
+5. Response flows back through the socket to Claude Code
+6. Claude Code reads the response and continues or stops
 
-# Release build
-swift build -c release
+Blocking (permission requests) has a 5-minute timeout.
 
-# Run tests
-swift test
+## Roadmap
 
-# Run with verbose output
-swift test -v
-```
-
-## Troubleshooting
-
-### Hooks not working
-- Check that `/opt/homebrew/lib/claude-bash-hook.sh` exists
-- Verify the hook is sourced in your `.zshrc` file
-- Look for the "Claude Tap Hooks" comment in `.zshrc`
-- Try clicking "Reinstall Hooks" in the Tap menu bar
-
-### Socket connection issues
-- Ensure the app is running (check the menu bar)
-- Verify the socket path: `ls -l ~/Library/Application\ Support/Tap/tap.sock`
-- Check Console.app for error messages
-
-### Notifications not appearing
-- Verify Tap has notification permissions in System Preferences
-- Check that macOS notifications are not disabled globally
-
-## Uninstallation
-
-To remove Tap:
-
-1. Quit the app from the menu bar
-2. Run: `swift run Tap uninstall` (future feature)
-3. Or manually remove the hook from `~/.zshrc`
-4. Delete the app bundle
+- **Phase 1** (current): Mac menu bar app with native notifications ✅
+- **Phase 2**: Cloud relay server for remote push notifications
+- **Phase 3**: iPhone + Apple Watch companion app — approve requests from your wrist
 
 ## License
 
 MIT
 
-## Contributing
+## Author
 
-For bug reports and feature requests, please open an issue on GitHub.
+Ryan Zaucha ([@keeptahoeblueish](https://github.com/keeptahoeblueish))
