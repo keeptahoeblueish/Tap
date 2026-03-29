@@ -1,0 +1,1 @@
+/Users/betterclaw/Projects/claude-config/hookify/hookify.audit-before-commit.local.md

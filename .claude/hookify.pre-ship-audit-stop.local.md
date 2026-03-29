@@ -1,0 +1,1 @@
+/Users/betterclaw/Projects/claude-config/hookify/hookify.pre-ship-audit-stop.local.md

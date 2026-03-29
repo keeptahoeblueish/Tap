@@ -1,0 +1,1 @@
+/Users/betterclaw/Projects/claude-config/hookify/hookify.devops-alignment-check.local.md
