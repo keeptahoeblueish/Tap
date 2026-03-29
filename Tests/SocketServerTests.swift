@@ -335,12 +335,13 @@ final class SocketServerTests: XCTestCase {
     }
 
     private func sendRawJSONToServer(_ json: String) {
-        guard let socket = socket(AF_UNIX, SOCK_STREAM, 0), socket >= 0 else {
+        let sock = socket(AF_UNIX, SOCK_STREAM, 0)
+        guard sock >= 0 else {
             XCTFail("Failed to create client socket")
             return
         }
 
-        defer { close(socket) }
+        defer { close(sock) }
 
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)
@@ -351,7 +352,7 @@ final class SocketServerTests: XCTestCase {
         }
 
         let result = withUnsafePointer(to: &addr) { ptr -> Int32 in
-            return connect(socket, UnsafeRawPointer(ptr).assumingMemoryBound(to: sockaddr.self), socklen_t(MemoryLayout<sockaddr_un>.size))
+            return connect(sock, UnsafeRawPointer(ptr).assumingMemoryBound(to: sockaddr.self), socklen_t(MemoryLayout<sockaddr_un>.size))
         }
 
         guard result == 0 else {
@@ -361,17 +362,18 @@ final class SocketServerTests: XCTestCase {
 
         if let data = json.data(using: .utf8) {
             let buffer = [UInt8](data)
-            _ = write(socket, buffer, buffer.count)
+            _ = write(sock, buffer, buffer.count)
         }
     }
 
     private func sendEventAndWaitForResponse(type: String, id: String) -> Data? {
-        guard let socket = socket(AF_UNIX, SOCK_STREAM, 0), socket >= 0 else {
+        let sock = socket(AF_UNIX, SOCK_STREAM, 0)
+        guard sock >= 0 else {
             XCTFail("Failed to create client socket")
             return nil
         }
 
-        defer { close(socket) }
+        defer { close(sock) }
 
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)
@@ -382,7 +384,7 @@ final class SocketServerTests: XCTestCase {
         }
 
         let result = withUnsafePointer(to: &addr) { ptr -> Int32 in
-            return connect(socket, UnsafeRawPointer(ptr).assumingMemoryBound(to: sockaddr.self), socklen_t(MemoryLayout<sockaddr_un>.size))
+            return connect(sock, UnsafeRawPointer(ptr).assumingMemoryBound(to: sockaddr.self), socklen_t(MemoryLayout<sockaddr_un>.size))
         }
 
         guard result == 0 else {
@@ -402,12 +404,12 @@ final class SocketServerTests: XCTestCase {
 
         if let data = json.data(using: .utf8) {
             let buffer = [UInt8](data)
-            _ = write(socket, buffer, buffer.count)
+            _ = write(sock, buffer, buffer.count)
         }
 
         // Read response
         var responseBuffer = [UInt8](repeating: 0, count: 1024)
-        let bytesRead = read(socket, &responseBuffer, responseBuffer.count)
+        let bytesRead = read(sock, &responseBuffer, responseBuffer.count)
 
         if bytesRead > 0 {
             return Data(bytes: responseBuffer, count: Int(bytesRead))
