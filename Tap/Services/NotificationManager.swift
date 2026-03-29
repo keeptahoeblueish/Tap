@@ -1,5 +1,6 @@
 import Foundation
 import UserNotifications
+import AppKit
 
 final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     var onResponse: ((String, Bool) -> Void)?
@@ -39,6 +40,18 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         getCenter()?.add(request) { error in
             if let error = error {
                 print("Tap: notification error: \(error.localizedDescription)")
+            }
+        }
+
+        // Bounce the Dock icon to grab attention
+        DispatchQueue.main.async {
+            switch event.type {
+            case .permission, .blocker, .error:
+                // Keep bouncing until the user clicks
+                NSApp.requestUserAttention(.criticalRequest)
+            case .complete:
+                // Single bounce
+                NSApp.requestUserAttention(.informationalRequest)
             }
         }
     }
