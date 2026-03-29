@@ -1,0 +1,58 @@
+name: Build Tap.app
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build app
+        run: |
+          xcodebuild -project Tap.xcodeproj \
+            -scheme Tap \
+            -configuration Release \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Create app bundle artifact
+        run: |
+          APP_PATH="build/Build/Products/Release/Tap.app"
+          if [ -d "$APP_PATH" ]; then
+            cd build/Build/Products/Release
+            zip -r Tap.app.zip Tap.app
+            mv Tap.app.zip "$GITHUB_WORKSPACE/"
+          else
+            echo "ERROR: Tap.app not found at $APP_PATH"
+            find build -name "Tap.app" -o -name "Tap" -type f 2>/dev/null
+            exit 1
+          fi
+
+      - name: Upload app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tap.app
+          path: Tap.app.zip
+          retention-days: 30
+
+  test:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run tests (SPM)
+        run: swift test
