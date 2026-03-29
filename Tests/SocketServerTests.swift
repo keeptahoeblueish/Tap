@@ -16,18 +16,17 @@ final class SocketServerTests: XCTestCase {
     override func setUp() {
         super.setUp()
 
-        // Skip socket tests in CI environment due to Unix domain socket restrictions
-        if Self.isRunningInCI() {
-            try? XCTSkipIf(true, "Socket server tests skipped in CI environment")
-            return
-        }
-
         // Create unique temp socket path for each test
         let tempDir = NSTemporaryDirectory()
         let uniqueName = "tap_test_\(UUID().uuidString).sock"
         testSocketPath = (tempDir as NSString).appendingPathComponent(uniqueName)
 
         server = SocketServer(socketPath: testSocketPath)
+    }
+
+    /// Call at the start of each test to skip in CI
+    private func skipIfCI() throws {
+        try XCTSkipIf(Self.isRunningInCI(), "Socket server tests skipped in CI environment")
     }
 
     override func tearDown() {
@@ -39,7 +38,8 @@ final class SocketServerTests: XCTestCase {
 
     // MARK: - Server Lifecycle Tests
 
-    func testServerStartsSuccessfully() {
+    func testServerStartsSuccessfully() throws {
+        try skipIfCI()
         server.start()
 
         let expectation = XCTestExpectation(description: "Server starts within reasonable time")
@@ -51,7 +51,8 @@ final class SocketServerTests: XCTestCase {
         wait(for: [expectation], timeout: 2.0)
     }
 
-    func testServerCreatesSocketFile() {
+    func testServerCreatesSocketFile() throws {
+        try skipIfCI()
         server.start()
 
         let expectation = XCTestExpectation(description: "Socket file exists")
@@ -64,7 +65,8 @@ final class SocketServerTests: XCTestCase {
         wait(for: [expectation], timeout: 2.0)
     }
 
-    func testServerStopsSuccessfully() {
+    func testServerStopsSuccessfully() throws {
+        try skipIfCI()
         server.start()
 
         let startExpectation = XCTestExpectation(description: "Server starts")
@@ -85,7 +87,8 @@ final class SocketServerTests: XCTestCase {
         wait(for: [stopExpectation], timeout: 2.0)
     }
 
-    func testServerCleansUpSocketFileOnStop() {
+    func testServerCleansUpSocketFileOnStop() throws {
+        try skipIfCI()
         server.start()
 
         let startExpectation = XCTestExpectation(description: "Server starts and socket exists")
@@ -110,7 +113,8 @@ final class SocketServerTests: XCTestCase {
 
     // MARK: - Event Reception Tests
 
-    func testServerReceivesPermissionEvent() {
+    func testServerReceivesPermissionEvent() throws {
+        try skipIfCI()
         let eventExpectation = XCTestExpectation(description: "Permission event received")
         var receivedEvent: TapEvent?
 
@@ -134,7 +138,8 @@ final class SocketServerTests: XCTestCase {
         XCTAssertEqual(receivedEvent?.message, "Test permission event")
     }
 
-    func testServerReceivesCompleteEvent() {
+    func testServerReceivesCompleteEvent() throws {
+        try skipIfCI()
         let eventExpectation = XCTestExpectation(description: "Complete event received")
         var receivedEvent: TapEvent?
 
@@ -156,7 +161,8 @@ final class SocketServerTests: XCTestCase {
         XCTAssertEqual(receivedEvent?.id, "evt_test_002")
     }
 
-    func testServerReceivesErrorEvent() {
+    func testServerReceivesErrorEvent() throws {
+        try skipIfCI()
         let eventExpectation = XCTestExpectation(description: "Error event received")
         var receivedEvent: TapEvent?
 
@@ -177,7 +183,8 @@ final class SocketServerTests: XCTestCase {
         XCTAssertEqual(receivedEvent?.type, .error)
     }
 
-    func testServerReceivesBlockerEvent() {
+    func testServerReceivesBlockerEvent() throws {
+        try skipIfCI()
         let eventExpectation = XCTestExpectation(description: "Blocker event received")
         var receivedEvent: TapEvent?
 
@@ -200,7 +207,8 @@ final class SocketServerTests: XCTestCase {
 
     // MARK: - Response Tests
 
-    func testServerSendsApprovalResponse() {
+    func testServerSendsApprovalResponse() throws {
+        try skipIfCI()
         let eventExpectation = XCTestExpectation(description: "Event received")
         var receivedEvent: TapEvent?
 
@@ -233,7 +241,8 @@ final class SocketServerTests: XCTestCase {
         }
     }
 
-    func testServerSendsDenialResponse() {
+    func testServerSendsDenialResponse() throws {
+        try skipIfCI()
         let eventExpectation = XCTestExpectation(description: "Event received")
         var receivedEvent: TapEvent?
 
@@ -268,7 +277,8 @@ final class SocketServerTests: XCTestCase {
 
     // MARK: - Event Parsing Tests
 
-    func testServerParsesEventWithToolInfo() {
+    func testServerParsesEventWithToolInfo() throws {
+        try skipIfCI()
         let eventExpectation = XCTestExpectation(description: "Event with tool info received")
         var receivedEvent: TapEvent?
 
@@ -300,7 +310,8 @@ final class SocketServerTests: XCTestCase {
         XCTAssertEqual(receivedEvent?.toolInput, "git push origin main")
     }
 
-    func testServerHandlesMultipleConnections() {
+    func testServerHandlesMultipleConnections() throws {
+        try skipIfCI()
         let event1Expectation = XCTestExpectation(description: "First event received")
         let event2Expectation = XCTestExpectation(description: "Second event received")
         var receivedEvents: [TapEvent] = []

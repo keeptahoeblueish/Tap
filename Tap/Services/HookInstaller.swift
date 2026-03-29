@@ -110,10 +110,16 @@ final class HookInstaller {
         }
     }
 
+    private func isTapHookEntry(_ hookDef: [String: Any]) -> Bool {
+        if let desc = hookDef["description"] as? String, desc.contains(Self.tapHookMarker) { return true }
+        if let cmd = hookDef["command"] as? String, cmd.contains(Self.tapHookMarker) { return true }
+        return false
+    }
+
     private func containsTapHook(_ entries: [[String: Any]]) -> Bool {
         entries.contains { entry in
             let innerHooks = entry["hooks"] as? [[String: Any]] ?? []
-            return innerHooks.contains { ($0["command"] as? String)?.contains(Self.tapHookMarker) ?? false }
+            return innerHooks.contains { isTapHookEntry($0) }
         }
     }
 
@@ -129,7 +135,7 @@ final class HookInstaller {
             if var entries = hooks[key] as? [[String: Any]] {
                 entries.removeAll { entry in
                     let innerHooks = entry["hooks"] as? [[String: Any]] ?? []
-                    return innerHooks.contains { ($0["command"] as? String)?.contains(Self.tapHookMarker) ?? false }
+                    return innerHooks.contains { isTapHookEntry($0) }
                 }
                 hooks[key] = entries.isEmpty ? nil : entries
             }
