@@ -75,6 +75,32 @@ No `.zshrc` modifications. No bash traps. Just sockets and notifications.
 brew install --cask tap
 ```
 
+### Build From Source
+
+**Prerequisites:**
+```bash
+brew install xcodegen socat
+```
+
+**Build the app:**
+```bash
+cd Tap
+xcodegen generate        # Generates Tap.xcodeproj from project.yml
+swift build -c release  # Build optimized binary
+open .build/release/Tap.app
+```
+
+**Or run in debug mode:**
+```bash
+swift build -c debug
+swift run Tap
+```
+
+**Run tests:**
+```bash
+swift test
+```
+
 ## What Gets Modified
 
 On first launch, Tap adds three hooks to `~/.claude/settings.json`. Your existing settings are preserved. If hooks get removed, click "Reinstall Hooks" in the menu bar. Uninstall from the app menu to cleanly remove all hooks.

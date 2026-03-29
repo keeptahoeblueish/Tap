@@ -1,0 +1,45 @@
+name: Tap
+options:
+  bundleIdPrefix: com.keeptahoeblueish
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "15.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+
+targets:
+  Tap:
+    type: application
+    platform: macOS
+    sources:
+      - path: Tap
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.keeptahoeblueish.Tap
+        INFOPLIST_FILE: Tap/Info.plist
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: ""
+        PRODUCT_NAME: Tap
+        GENERATE_INFOPLIST_FILE: false
+        LD_RUNPATH_SEARCH_PATHS: "@executable_path/../Frameworks"
+    entitlements:
+      path: Tap/Tap.entitlements
+      properties:
+        com.apple.security.app-sandbox: false
+
+  TapTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: Tap
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.keeptahoeblueish.TapTests
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Tap.app/Contents/MacOS/Tap"
+        BUNDLE_LOADER: "$(TEST_HOST)"

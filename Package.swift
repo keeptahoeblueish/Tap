@@ -8,6 +8,7 @@ let package = Package(
         .executableTarget(
             name: "Tap",
             path: "Tap",
+            exclude: ["Info.plist", "Tap.entitlements"],
             resources: [.process("Resources")]
         ),
         .testTarget(
