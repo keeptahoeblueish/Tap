@@ -57,6 +57,14 @@ Tap/
 - **PreToolUse hook blocks** until user responds (5 min timeout, then falls through to terminal)
 - **Graceful degradation** — if Tap isn't running, hooks return `{"decision": "ask"}` and Claude Code prompts in terminal as normal
 
+## Deploy & Release
+
+- **Open source on GitHub**: keeptahoeblueish/Tap
+- **CI/CD**: GitHub Actions (builds on push, runs tests)
+- **No App Store deploy yet** — Phase 1 is Mac app development only
+- **Swift Package Manager** (not Xcode) → builds on CI and locally via `swift build`
+- **Versioning**: Semver tags on releases (GitHub releases page)
+
 ## Phases
 
 - **Phase 1** (current): Mac menu bar app + macOS notifications
@@ -67,4 +75,5 @@ Tap/
 
 - Professional README matters — it's the front door
 - MIT license
-- Public repo: keeptahoeblueish/Tap (not created yet)
+- Public repo: keeptahoeblueish/Tap
+- GitHub Actions CI/CD for builds and tests (no Xcode on Mac Mini)
