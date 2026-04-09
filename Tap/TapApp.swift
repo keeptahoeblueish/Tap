@@ -30,6 +30,15 @@ final class AppState: ObservableObject {
 
         setupBindings()
         startServices()
+
+        // Clean up socket when app terminates
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.willTerminateNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.socketServer.stop()
+        }
     }
 
     private func setupBindings() {
