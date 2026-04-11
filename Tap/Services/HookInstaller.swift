@@ -153,17 +153,44 @@ final class HookInstaller {
             return supportDir.appendingPathComponent("Tap/tap.sock").path
         }()
 
+        let configPath = {
+            let supportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            return supportDir.appendingPathComponent("Tap/config").path
+        }()
+
         return """
         #!/bin/bash
         # tap-hook — Claude Code hook for Tap notifications
         # Auto-installed by Tap.app. Do not edit manually.
 
         SOCKET_PATH="\(socketPath)"
+        CONFIG_PATH="\(configPath)"
         EVENT_TYPE="${TAP_EVENT_TYPE:-notification}"
 
-        # If Tap isn't running, fall through gracefully
+        # Load ntfy topic if configured
+        NTFY_TOPIC=""
+        [ -f "$CONFIG_PATH" ] && NTFY_TOPIC=$(grep "^ntfy_topic=" "$CONFIG_PATH" 2>/dev/null | cut -d= -f2)
+
+        # Send to ntfy (phone notifications)
+        send_ntfy() {
+            local title="$1" message="$2" priority="$3" tags="$4"
+            [ -z "$NTFY_TOPIC" ] && return
+            curl -s -o /dev/null \\
+                -H "Title: $title" \\
+                -H "Priority: $priority" \\
+                -H "Tags: $tags" \\
+                -d "$message" \\
+                "https://ntfy.sh/$NTFY_TOPIC" &
+        }
+
+        # If Tap isn't running, still try ntfy, then fall through
         if [ ! -S "$SOCKET_PATH" ]; then
-            [ "$EVENT_TYPE" = "permission" ] && echo '{"decision": "ask"}'
+            if [ "$EVENT_TYPE" = "permission" ]; then
+                INPUT=$(cat)
+                TOOL_NAME=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tool_name','unknown'))" 2>/dev/null || echo "unknown")
+                send_ntfy "Permission Needed" "Claude wants to run: $TOOL_NAME" "urgent" "warning"
+                echo '{"decision": "ask"}'
+            fi
             exit 0
         fi
 
@@ -175,17 +202,21 @@ final class HookInstaller {
                 TOOL_NAME=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tool_name','unknown'))" 2>/dev/null || echo "unknown")
                 TOOL_INPUT=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); i=d.get('tool_input',{}); print(i if isinstance(i,str) else json.dumps(i)[:100])" 2>/dev/null || echo "")
                 MESSAGE="Claude wants to run: ${TOOL_NAME}${TOOL_INPUT:+ ($TOOL_INPUT)}"
+                send_ntfy "Permission Needed" "$MESSAGE" "urgent" "warning"
                 RESPONSE=$(echo "{\\"type\\":\\"permission\\",\\"id\\":\\"$EVENT_ID\\",\\"tool_name\\":\\"$TOOL_NAME\\",\\"tool_input\\":\\"$TOOL_INPUT\\",\\"message\\":\\"$MESSAGE\\",\\"timestamp\\":$(date +%s)}" | socat - UNIX-CONNECT:"$SOCKET_PATH" 2>/dev/null)
                 [ -z "$RESPONSE" ] && echo '{"decision": "ask"}' || echo "$RESPONSE"
                 ;;
             complete)
+                send_ntfy "Task Complete" "Claude finished the task" "default" "white_check_mark"
                 echo "{\\"type\\":\\"complete\\",\\"id\\":\\"$EVENT_ID\\",\\"message\\":\\"Task complete\\",\\"timestamp\\":$(date +%s)}" | socat - UNIX-CONNECT:"$SOCKET_PATH" 2>/dev/null &
                 ;;
             error)
                 ERROR_MSG=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tool_result','Error occurred')[:200])" 2>/dev/null || echo "An error occurred")
+                send_ntfy "Error" "$ERROR_MSG" "high" "x"
                 echo "{\\"type\\":\\"error\\",\\"id\\":\\"$EVENT_ID\\",\\"message\\":\\"$ERROR_MSG\\",\\"timestamp\\":$(date +%s)}" | socat - UNIX-CONNECT:"$SOCKET_PATH" 2>/dev/null &
                 ;;
             blocker)
+                send_ntfy "Action Needed" "Claude needs manual action from you" "urgent" "raised_hand"
                 echo "{\\"type\\":\\"blocker\\",\\"id\\":\\"$EVENT_ID\\",\\"message\\":\\"Claude needs manual action from you\\",\\"timestamp\\":$(date +%s)}" | socat - UNIX-CONNECT:"$SOCKET_PATH" 2>/dev/null &
                 ;;
         esac
